@@ -1,0 +1,3 @@
+https://flutter.dev/docs/development/data-and-backend/state-mgmt/options
+https://medium.com/codechai/architecting-your-flutter-project-bd04e144a8f1
+https://fluttersamples.com/
