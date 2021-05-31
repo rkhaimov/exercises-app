@@ -1,5 +1,9 @@
-import 'package:exesices_app/in_mem_storage.dart';
-import 'package:exesices_app/state.dart';
+import 'package:exesices_app/models/todo/in_mem_storage.dart';
+import 'package:exesices_app/models/todo/main.dart';
+import 'package:exesices_app/use-cases/create-todo/constants.dart';
+import 'package:exesices_app/use-cases/create-todo/main.dart';
+import 'package:exesices_app/use-cases/todo-list/constants.dart';
+import 'package:exesices_app/use-cases/todo-list/main.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -13,56 +17,32 @@ class VanillaApp extends StatefulWidget {
 }
 
 class _VanillaAppState extends State<VanillaApp> {
-  AppState appState = AppState(InMemoryTodoRepository());
+  TodoModel model = TodoModel(InMemoryTodoRepository());
 
   @override
   void initState() {
     super.initState();
 
-    appState.onInit(setState);
+    model.loadAll(setState);
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: Scaffold(
-          appBar: AppBar(
-            title: Text('Vanilla state'),
-          ),
-          body: appState.loading
-              ? Center(
-                  child: CircularProgressIndicator(),
-                )
-              : ReorderableListView.builder(
-                  buildDefaultDragHandles: false,
-                  onReorder: (oldIndex, newIndex) {
-                    setState(() {
-                      if (oldIndex < newIndex) {
-                        newIndex -= 1;
-                      }
-
-                      final todo = appState.todos.removeAt(oldIndex);
-
-                      appState.todos.insert(newIndex, todo);
-                    });
-                  },
-                  itemCount: appState.todos.length,
-                  itemBuilder: (context, index) {
-                    final todo = appState.todos[index];
-
-                    return ListTile(
-                      key: ValueKey(todo.id),
-                      leading:
-                          Checkbox(value: todo.completed, onChanged: (_) {}),
-                      title: Text(todo.task,
-                          style: Theme.of(context).textTheme.headline6),
-                      subtitle: Text('Subtitle'),
-                      trailing: ReorderableDragStartListener(
-                          index: index, child: Icon(Icons.drag_handle)),
-                    );
-                  },
-                )),
+      routes: {
+        kTodoListRoute: (_) => TodoList(
+            model.loading,
+            model.todos,
+            (id, checked) => model.toggleChecked(id, checked, setState),
+            (filter) => model.setFilter(filter, setState),
+            model.filter),
+        kCreateTodoRoute: (_) => CreateTodo(
+              onTodoCreate: (title, completed) =>
+                  model.create(title, completed, setState),
+            )
+      },
     );
   }
 }
