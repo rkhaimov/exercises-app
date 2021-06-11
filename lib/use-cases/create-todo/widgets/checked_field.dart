@@ -20,7 +20,7 @@ class CheckedField extends FormField<bool> {
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(label),
+                      Text(label, style: Theme.of(field.context).textTheme.subtitle1,),
                       Switch(value: value, onChanged: field.didChange)
                     ]),
               );

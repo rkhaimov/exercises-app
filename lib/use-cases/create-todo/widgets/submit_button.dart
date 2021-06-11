@@ -8,11 +8,9 @@ class SubmitButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      child: Text(
-        'create'.toUpperCase(),
-        style: TextStyle(
-            fontSize: 16, color: Theme.of(context).colorScheme.primaryVariant),
-      ),
+      child: Text('create'.toUpperCase(),
+          style: Theme.of(context).textTheme.button!.merge(
+              TextStyle(color: Theme.of(context).colorScheme.onSecondary))),
       onPressed: this.onSubmit,
       style: ElevatedButton.styleFrom(
           primary: Theme.of(context).colorScheme.secondary,

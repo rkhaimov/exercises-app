@@ -1,5 +1,6 @@
 import 'package:exesices_app/models/todo/in_mem_storage.dart';
 import 'package:exesices_app/models/todo/main.dart';
+import 'package:exesices_app/typedefs.dart';
 import 'package:exesices_app/use-cases/create-todo/constants.dart';
 import 'package:exesices_app/use-cases/create-todo/main.dart';
 import 'package:exesices_app/use-cases/todo-list/constants.dart';
@@ -18,6 +19,7 @@ class VanillaApp extends StatefulWidget {
 
 class _VanillaAppState extends State<VanillaApp> {
   TodoModel model = TodoModel(InMemoryTodoRepository());
+  AppTheme theme = AppTheme.dark;
 
   @override
   void initState() {
@@ -30,14 +32,23 @@ class _VanillaAppState extends State<VanillaApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
+      theme: theme == AppTheme.light ? ThemeData.light() : ThemeData.dark(),
       routes: {
         kTodoListRoute: (_) => TodoList(
-            model.loading,
-            model.todos,
-            (id, checked) => model.toggleChecked(id, checked, setState),
-            (filter) => model.setFilter(filter, setState),
-            model.filter),
+              loading: model.loading,
+              todos: model.todos,
+              filter: model.filter,
+              theme: theme,
+              onThemeChange: () => setState(() {
+                theme =
+                    theme == AppTheme.light ? AppTheme.dark : AppTheme.light;
+              }),
+              onTodoCheck: (id, checked) =>
+                  model.toggleChecked(id, checked, setState),
+              onFilterSelect: (filter) => model.setFilter(filter, setState),
+              onTodoReorder: (oldIndex, newIndex) =>
+                  model.reorder(oldIndex, newIndex, setState),
+            ),
         kCreateTodoRoute: (_) => CreateTodo(
               onTodoCreate: (title, completed) =>
                   model.create(title, completed, setState),

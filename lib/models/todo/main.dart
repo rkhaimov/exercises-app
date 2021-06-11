@@ -53,6 +53,18 @@ class TodoModel {
       _todos.add(Todo(title, title, completed));
     });
   }
+
+  reorder(int oldIndex, int newIndex, Mutate mutate) {
+    mutate(() {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+
+      final todo = _todos.removeAt(oldIndex);
+
+      _todos.insert(newIndex, todo);
+    });
+  }
 }
 
 typedef VoidCallback = void Function();
