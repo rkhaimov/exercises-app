@@ -1,12 +1,8 @@
-import 'package:exesices_app/models/todo/in_mem_storage.dart';
-import 'package:exesices_app/models/todo/main.dart';
-import 'package:exesices_app/typedefs.dart';
-import 'package:exesices_app/use-cases/create-todo/constants.dart';
-import 'package:exesices_app/use-cases/create-todo/main.dart';
-import 'package:exesices_app/use-cases/todo-list/constants.dart';
-import 'package:exesices_app/use-cases/todo-list/main.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue/flutter_blue.dart';
+import 'dart:async';
 
 void main() {
   runApp(VanillaApp());
@@ -18,42 +14,123 @@ class VanillaApp extends StatefulWidget {
 }
 
 class _VanillaAppState extends State<VanillaApp> {
-  TodoModel model = TodoModel(InMemoryTodoRepository());
-  AppTheme theme = AppTheme.dark;
-
-  @override
-  void initState() {
-    super.initState();
-
-    model.loadAll(setState);
-  }
+  BluetoothCharacteristic? characteristic;
+  HeartRateNotifier notifier = HeartRateNotifier();
 
   @override
   Widget build(BuildContext context) {
+    var c = characteristic;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: theme == AppTheme.light ? ThemeData.light() : ThemeData.dark(),
-      routes: {
-        kTodoListRoute: (_) => TodoList(
-              loading: model.loading,
-              todos: model.todos,
-              filter: model.filter,
-              theme: theme,
-              onThemeChange: () => setState(() {
-                theme =
-                    theme == AppTheme.light ? AppTheme.dark : AppTheme.light;
-              }),
-              onTodoCheck: (id, checked) =>
-                  model.toggleChecked(id, checked, setState),
-              onFilterSelect: (filter) => model.setFilter(filter, setState),
-              onTodoReorder: (oldIndex, newIndex) =>
-                  model.reorder(oldIndex, newIndex, setState),
-            ),
-        kCreateTodoRoute: (_) => CreateTodo(
-              onTodoCreate: (title, completed) =>
-                  model.create(title, completed, setState),
-            )
-      },
+      theme: ThemeData.dark(),
+      home: Scaffold(
+        body: Center(
+          child: c == null
+              ? FloatingActionButton(
+                  child: Icon(Icons.connected_tv),
+                  onPressed: connectToPolar,
+                )
+              : StreamBuilder<List<int>>(
+                  stream: c.value,
+                  builder: (context, snapshot) {
+                    var data = snapshot.data;
+
+                    if (data == null) {
+                      return Text(
+                        '--',
+                        style: TextStyle(
+                            fontSize: 80, fontWeight: FontWeight.bold),
+                      );
+                    }
+
+                    if (data.length == 0) {
+                      return Text(
+                        '--',
+                        style: TextStyle(
+                            fontSize: 80, fontWeight: FontWeight.bold),
+                      );
+                    }
+
+                    var rate = data.last;
+
+                    notifier.accept(rate);
+
+                    return Text(
+                      '$rate',
+                      style:
+                          TextStyle(fontSize: 80, fontWeight: FontWeight.bold),
+                    );
+                  }),
+        ),
+      ),
     );
+  }
+
+  connectToPolar() {
+    return FlutterBlue.instance.state.listen((blState) {
+      if (blState == BluetoothState.on) {
+        FlutterBlue.instance.startScan(timeout: Duration(seconds: 4));
+
+        var found = false;
+
+        FlutterBlue.instance.scanResults.listen((scanned) async {
+          if (found) {
+            return;
+          }
+
+          var polar = scanned.firstWhere(
+              (element) => element.device.id.id == 'A0:9E:1A:20:91:EE');
+
+          found = true;
+
+          polar.device.connect();
+
+          var devices = await FlutterBlue.instance.connectedDevices;
+
+          if (devices.length == 0) {
+            return;
+          }
+
+          var services = await devices.first.discoverServices();
+
+          var service = services.firstWhere((element) =>
+              element.uuid.toString() ==
+              '0000180d-0000-1000-8000-00805f9b34fb');
+
+          var characteristic = service.characteristics.firstWhere((element) =>
+              element.uuid.toString() ==
+              '00002a37-0000-1000-8000-00805f9b34fb');
+
+          characteristic.setNotifyValue(true);
+
+          setState(() {
+            this.characteristic = characteristic;
+          });
+        });
+
+        return;
+      }
+    });
+  }
+}
+
+class HeartRateNotifier {
+  AudioCache player = AudioCache();
+  bool _locked = false;
+
+  accept(int rate) {
+    if (rate < 120) {
+      return;
+    }
+
+    if (_locked) {
+      return;
+    }
+
+    _locked = true;
+    player.play('bong.mp3');
+
+    Timer(Duration(seconds: 10), () => _locked = false);
   }
 }
